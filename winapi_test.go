@@ -7,6 +7,7 @@
 package winapi_test
 
 import (
+	"syscall"
 	"testing"
 	"unsafe"
 
@@ -20,5 +21,18 @@ func TestGlobalMemoryStatusEx(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Logf("%+v", m)
+	t.Logf("MEMORYSTATUSEX is %+v", m)
+}
+
+func TestGetProcessHandleCount(t *testing.T) {
+	h, err := syscall.GetCurrentProcess()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var count uint32
+	err = winapi.GetProcessHandleCount(h, &count)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Logf("Handle count is %v", count)
 }

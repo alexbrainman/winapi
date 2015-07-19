@@ -21,3 +21,4 @@ type MEMORYSTATUSEX struct {
 }
 
 //sys	GlobalMemoryStatusEx(buf *MEMORYSTATUSEX) (err error) = kernel32.GlobalMemoryStatusEx
+//sys	GetProcessHandleCount(process syscall.Handle, handleCount *uint32) (err error) = kernel32.GetProcessHandleCount
