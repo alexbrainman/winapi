@@ -12,6 +12,7 @@ var (
 
 	procGlobalMemoryStatusEx  = modkernel32.NewProc("GlobalMemoryStatusEx")
 	procGetProcessHandleCount = modkernel32.NewProc("GetProcessHandleCount")
+	procGetVersionExW         = modkernel32.NewProc("GetVersionExW")
 )
 
 func GlobalMemoryStatusEx(buf *MEMORYSTATUSEX) (err error) {
@@ -28,6 +29,18 @@ func GlobalMemoryStatusEx(buf *MEMORYSTATUSEX) (err error) {
 
 func GetProcessHandleCount(process syscall.Handle, handleCount *uint32) (err error) {
 	r1, _, e1 := syscall.Syscall(procGetProcessHandleCount.Addr(), 2, uintptr(process), uintptr(unsafe.Pointer(handleCount)), 0)
+	if r1 == 0 {
+		if e1 != 0 {
+			err = error(e1)
+		} else {
+			err = syscall.EINVAL
+		}
+	}
+	return
+}
+
+func GetVersionEx(versioninfo *OSVERSIONINFOEX) (err error) {
+	r1, _, e1 := syscall.Syscall(procGetVersionExW.Addr(), 1, uintptr(unsafe.Pointer(versioninfo)), 0, 0)
 	if r1 == 0 {
 		if e1 != 0 {
 			err = error(e1)

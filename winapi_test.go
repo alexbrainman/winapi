@@ -36,3 +36,14 @@ func TestGetProcessHandleCount(t *testing.T) {
 	}
 	t.Logf("Handle count is %v", count)
 }
+
+func TestGetVersionEx(t *testing.T) {
+	var vi winapi.OSVERSIONINFOEX
+	vi.OSVersionInfoSize = uint32(unsafe.Sizeof(vi))
+	err := winapi.GetVersionEx(&vi)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Logf("OSVERSIONINFOEX is %+v", vi)
+	t.Logf("OSVERSIONINFOEX.CSDVersion is %v", syscall.UTF16ToString(vi.CSDVersion[:]))
+}
