@@ -19,6 +19,11 @@ var (
 	procSetCommTimeouts       = modkernel32.NewProc("SetCommTimeouts")
 	procSetupComm             = modkernel32.NewProc("SetupComm")
 	procSetCommMask           = modkernel32.NewProc("SetCommMask")
+	procTlsAlloc              = modkernel32.NewProc("TlsAlloc")
+	procTlsFree               = modkernel32.NewProc("TlsFree")
+	procTlsSetValue           = modkernel32.NewProc("TlsSetValue")
+	procTlsGetValue           = modkernel32.NewProc("TlsGetValue")
+	procGetCurrentThreadId    = modkernel32.NewProc("GetCurrentThreadId")
 )
 
 func GlobalMemoryStatusEx(buf *MEMORYSTATUSEX) (err error) {
@@ -126,5 +131,61 @@ func SetCommMask(handle syscall.Handle, mask uint32) (err error) {
 			err = syscall.EINVAL
 		}
 	}
+	return
+}
+
+func TlsAlloc() (index uint32, err error) {
+	r0, _, e1 := syscall.Syscall(procTlsAlloc.Addr(), 0, 0, 0, 0)
+	index = uint32(r0)
+	if index == TLS_OUT_OF_INDEXES {
+		if e1 != 0 {
+			err = error(e1)
+		} else {
+			err = syscall.EINVAL
+		}
+	}
+	return
+}
+
+func TlsFree(index uint32) (err error) {
+	r1, _, e1 := syscall.Syscall(procTlsFree.Addr(), 1, uintptr(index), 0, 0)
+	if r1 == 0 {
+		if e1 != 0 {
+			err = error(e1)
+		} else {
+			err = syscall.EINVAL
+		}
+	}
+	return
+}
+
+func TlsSetValue(index uint32, value uintptr) (err error) {
+	r1, _, e1 := syscall.Syscall(procTlsSetValue.Addr(), 2, uintptr(index), uintptr(value), 0)
+	if r1 == 0 {
+		if e1 != 0 {
+			err = error(e1)
+		} else {
+			err = syscall.EINVAL
+		}
+	}
+	return
+}
+
+func TlsGetValue(index uint32) (value uintptr, err error) {
+	r0, _, e1 := syscall.Syscall(procTlsGetValue.Addr(), 1, uintptr(index), 0, 0)
+	value = uintptr(r0)
+	if value == 0 {
+		if e1 != 0 {
+			err = error(e1)
+		} else {
+			err = syscall.EINVAL
+		}
+	}
+	return
+}
+
+func GetCurrentThreadId() (id uint32) {
+	r0, _, _ := syscall.Syscall(procGetCurrentThreadId.Addr(), 0, 0, 0, 0)
+	id = uint32(r0)
 	return
 }

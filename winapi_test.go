@@ -7,6 +7,7 @@
 package winapi_test
 
 import (
+	"runtime"
 	"syscall"
 	"testing"
 	"unsafe"
@@ -46,4 +47,52 @@ func TestGetVersionEx(t *testing.T) {
 	}
 	t.Logf("OSVERSIONINFOEX is %+v", vi)
 	t.Logf("OSVERSIONINFOEX.CSDVersion is %v", syscall.UTF16ToString(vi.CSDVersion[:]))
+}
+
+func testTlsThread(t *testing.T, tlsidx uint32) {
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+
+	threadId := winapi.GetCurrentThreadId()
+
+	want := uintptr(threadId)
+	err := winapi.TlsSetValue(tlsidx, want)
+	if err != nil {
+		t.Fatal(err)
+	}
+	have, err := winapi.TlsGetValue(tlsidx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want != have {
+		t.Errorf("threadid=%d: unexpected tls data %d, want %d", threadId, have, want)
+	}
+}
+
+func TestTls(t *testing.T) {
+	tlsidx, err := winapi.TlsAlloc()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		err := winapi.TlsFree(tlsidx)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}()
+
+	const threadCount = 20
+
+	done := make(chan bool)
+	for i := 0; i < threadCount; i++ {
+		go func() {
+			defer func() {
+				done <- true
+			}()
+			testTlsThread(t, tlsidx)
+		}()
+	}
+	for i := 0; i < threadCount; i++ {
+		<-done
+	}
 }
