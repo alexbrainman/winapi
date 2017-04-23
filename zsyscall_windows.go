@@ -2,13 +2,42 @@
 
 package winapi
 
-import "unsafe"
-import "syscall"
+import (
+	"syscall"
+	"unsafe"
+
+	"golang.org/x/sys/windows"
+)
 
 var _ unsafe.Pointer
 
+// Do the interface allocations only once for common
+// Errno values.
+const (
+	errnoERROR_IO_PENDING = 997
+)
+
 var (
-	modkernel32 = syscall.NewLazyDLL("kernel32.dll")
+	errERROR_IO_PENDING error = syscall.Errno(errnoERROR_IO_PENDING)
+)
+
+// errnoErr returns common boxed Errno values, to prevent
+// allocations at runtime.
+func errnoErr(e syscall.Errno) error {
+	switch e {
+	case 0:
+		return nil
+	case errnoERROR_IO_PENDING:
+		return errERROR_IO_PENDING
+	}
+	// TODO: add more here, after collecting data on the common
+	// error values see on Windows. (perhaps when running
+	// all.bat?)
+	return e
+}
+
+var (
+	modkernel32 = windows.NewLazySystemDLL("kernel32.dll")
 
 	procGlobalMemoryStatusEx  = modkernel32.NewProc("GlobalMemoryStatusEx")
 	procGetProcessHandleCount = modkernel32.NewProc("GetProcessHandleCount")
@@ -30,7 +59,7 @@ func GlobalMemoryStatusEx(buf *MEMORYSTATUSEX) (err error) {
 	r1, _, e1 := syscall.Syscall(procGlobalMemoryStatusEx.Addr(), 1, uintptr(unsafe.Pointer(buf)), 0, 0)
 	if r1 == 0 {
 		if e1 != 0 {
-			err = error(e1)
+			err = errnoErr(e1)
 		} else {
 			err = syscall.EINVAL
 		}
@@ -42,7 +71,7 @@ func GetProcessHandleCount(process syscall.Handle, handleCount *uint32) (err err
 	r1, _, e1 := syscall.Syscall(procGetProcessHandleCount.Addr(), 2, uintptr(process), uintptr(unsafe.Pointer(handleCount)), 0)
 	if r1 == 0 {
 		if e1 != 0 {
-			err = error(e1)
+			err = errnoErr(e1)
 		} else {
 			err = syscall.EINVAL
 		}
@@ -54,7 +83,7 @@ func GetVersionEx(versioninfo *OSVERSIONINFOEX) (err error) {
 	r1, _, e1 := syscall.Syscall(procGetVersionExW.Addr(), 1, uintptr(unsafe.Pointer(versioninfo)), 0, 0)
 	if r1 == 0 {
 		if e1 != 0 {
-			err = error(e1)
+			err = errnoErr(e1)
 		} else {
 			err = syscall.EINVAL
 		}
@@ -66,7 +95,7 @@ func GetCommState(handle syscall.Handle, dcb *DCB) (err error) {
 	r1, _, e1 := syscall.Syscall(procGetCommState.Addr(), 2, uintptr(handle), uintptr(unsafe.Pointer(dcb)), 0)
 	if r1 == 0 {
 		if e1 != 0 {
-			err = error(e1)
+			err = errnoErr(e1)
 		} else {
 			err = syscall.EINVAL
 		}
@@ -78,7 +107,7 @@ func SetCommState(handle syscall.Handle, dcb *DCB) (err error) {
 	r1, _, e1 := syscall.Syscall(procSetCommState.Addr(), 2, uintptr(handle), uintptr(unsafe.Pointer(dcb)), 0)
 	if r1 == 0 {
 		if e1 != 0 {
-			err = error(e1)
+			err = errnoErr(e1)
 		} else {
 			err = syscall.EINVAL
 		}
@@ -90,7 +119,7 @@ func GetCommTimeouts(handle syscall.Handle, timeouts *COMMTIMEOUTS) (err error) 
 	r1, _, e1 := syscall.Syscall(procGetCommTimeouts.Addr(), 2, uintptr(handle), uintptr(unsafe.Pointer(timeouts)), 0)
 	if r1 == 0 {
 		if e1 != 0 {
-			err = error(e1)
+			err = errnoErr(e1)
 		} else {
 			err = syscall.EINVAL
 		}
@@ -102,7 +131,7 @@ func SetCommTimeouts(handle syscall.Handle, timeouts *COMMTIMEOUTS) (err error) 
 	r1, _, e1 := syscall.Syscall(procSetCommTimeouts.Addr(), 2, uintptr(handle), uintptr(unsafe.Pointer(timeouts)), 0)
 	if r1 == 0 {
 		if e1 != 0 {
-			err = error(e1)
+			err = errnoErr(e1)
 		} else {
 			err = syscall.EINVAL
 		}
@@ -114,7 +143,7 @@ func SetupComm(handle syscall.Handle, inqueue uint32, outqueue uint32) (err erro
 	r1, _, e1 := syscall.Syscall(procSetupComm.Addr(), 3, uintptr(handle), uintptr(inqueue), uintptr(outqueue))
 	if r1 == 0 {
 		if e1 != 0 {
-			err = error(e1)
+			err = errnoErr(e1)
 		} else {
 			err = syscall.EINVAL
 		}
@@ -126,7 +155,7 @@ func SetCommMask(handle syscall.Handle, mask uint32) (err error) {
 	r1, _, e1 := syscall.Syscall(procSetCommMask.Addr(), 2, uintptr(handle), uintptr(mask), 0)
 	if r1 == 0 {
 		if e1 != 0 {
-			err = error(e1)
+			err = errnoErr(e1)
 		} else {
 			err = syscall.EINVAL
 		}
@@ -139,7 +168,7 @@ func TlsAlloc() (index uint32, err error) {
 	index = uint32(r0)
 	if index == TLS_OUT_OF_INDEXES {
 		if e1 != 0 {
-			err = error(e1)
+			err = errnoErr(e1)
 		} else {
 			err = syscall.EINVAL
 		}
@@ -151,7 +180,7 @@ func TlsFree(index uint32) (err error) {
 	r1, _, e1 := syscall.Syscall(procTlsFree.Addr(), 1, uintptr(index), 0, 0)
 	if r1 == 0 {
 		if e1 != 0 {
-			err = error(e1)
+			err = errnoErr(e1)
 		} else {
 			err = syscall.EINVAL
 		}
@@ -163,7 +192,7 @@ func TlsSetValue(index uint32, value uintptr) (err error) {
 	r1, _, e1 := syscall.Syscall(procTlsSetValue.Addr(), 2, uintptr(index), uintptr(value), 0)
 	if r1 == 0 {
 		if e1 != 0 {
-			err = error(e1)
+			err = errnoErr(e1)
 		} else {
 			err = syscall.EINVAL
 		}
@@ -176,7 +205,7 @@ func TlsGetValue(index uint32) (value uintptr, err error) {
 	value = uintptr(r0)
 	if value == 0 {
 		if e1 != 0 {
-			err = error(e1)
+			err = errnoErr(e1)
 		} else {
 			err = syscall.EINVAL
 		}
