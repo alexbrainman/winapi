@@ -38,6 +38,7 @@ func errnoErr(e syscall.Errno) error {
 
 var (
 	modkernel32 = windows.NewLazySystemDLL("kernel32.dll")
+	modadvapi32 = windows.NewLazySystemDLL("advapi32.dll")
 
 	procGlobalMemoryStatusEx  = modkernel32.NewProc("GlobalMemoryStatusEx")
 	procGetProcessHandleCount = modkernel32.NewProc("GetProcessHandleCount")
@@ -56,6 +57,8 @@ var (
 	procVirtualAlloc          = modkernel32.NewProc("VirtualAlloc")
 	procVirtualFree           = modkernel32.NewProc("VirtualFree")
 	procVirtualProtect        = modkernel32.NewProc("VirtualProtect")
+	procInitializeAcl         = modadvapi32.NewProc("InitializeAcl")
+	procSetNamedSecurityInfoW = modadvapi32.NewProc("SetNamedSecurityInfoW")
 )
 
 func GlobalMemoryStatusEx(buf *MEMORYSTATUSEX) (err error) {
@@ -256,5 +259,23 @@ func VirtualProtect(address uintptr, size uintptr, newprotect uint32, oldprotect
 			err = syscall.EINVAL
 		}
 	}
+	return
+}
+
+func InitializeAcl(acl *ACL, acllen uint32, aclrev uint32) (err error) {
+	r1, _, e1 := syscall.Syscall(procInitializeAcl.Addr(), 3, uintptr(unsafe.Pointer(acl)), uintptr(acllen), uintptr(aclrev))
+	if r1 == 0 {
+		if e1 != 0 {
+			err = errnoErr(e1)
+		} else {
+			err = syscall.EINVAL
+		}
+	}
+	return
+}
+
+func SetNamedSecurityInfo(objname *uint16, objtype int32, secinfo SECURITY_INFORMATION, owner *syscall.SID, group *syscall.SID, dacl *ACL, sacl *ACL) (errno uint32) {
+	r0, _, _ := syscall.Syscall9(procSetNamedSecurityInfoW.Addr(), 7, uintptr(unsafe.Pointer(objname)), uintptr(objtype), uintptr(secinfo), uintptr(unsafe.Pointer(owner)), uintptr(unsafe.Pointer(group)), uintptr(unsafe.Pointer(dacl)), uintptr(unsafe.Pointer(sacl)), 0, 0)
+	errno = uint32(r0)
 	return
 }
