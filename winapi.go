@@ -36,3 +36,5 @@ type OSVERSIONINFOEX struct {
 }
 
 //sys	GetVersionEx(versioninfo *OSVERSIONINFOEX) (err error) = kernel32.GetVersionExW
+
+//sys	CopyFile(existingName *uint16, newName *uint16, failIfExists bool) (err error) = kernel32.CopyFileW
